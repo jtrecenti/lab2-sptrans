@@ -99,6 +99,20 @@ algoritmo, grid de hiperparâmetros e lista de variáveis estão no
 `conf/config.yaml`. Trocar de modelo é editar uma linha de YAML, não caçar um
 número no meio de uma função.
 
+> **Quando um arquivo de configuração vale a pena, e quando não vale.** Ele
+> paga por si quando você roda o **mesmo código com configurações diferentes**:
+> um experimento por arquivo, um ambiente de teste e outro de produção, a mesma
+> análise para outra cidade. É por isso que ferramentas como Hydra existem.
+>
+> Ele cobra um preço: o editor não completa, o `ruff` não avisa se você errou o
+> nome de uma coluna, e o erro só aparece quando roda. A lista de variáveis
+> aqui talvez estivesse melhor como constante em Python, e não em YAML.
+> Mantivemos no arquivo porque os exercícios pedem para trocar de modelo e de
+> conjunto de variáveis várias vezes, e é bom que isso não exija tocar no
+> código. A versão mínima do laboratório, feita ao vivo em aula, **não** tem
+> arquivo de configuração: usa constantes no topo do módulo. As duas escolhas
+> são defensáveis, e vale saber qual você está fazendo e por quê.
+
 **4. Cada etapa é um comando que lê e escreve arquivo.**
 
 ```bash
