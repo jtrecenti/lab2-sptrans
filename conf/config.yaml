@@ -1,0 +1,67 @@
+# Parametros do pipeline. Tudo que e' escolha de projeto mora aqui,
+# nao espalhado pelo codigo.
+
+seed: 42
+
+fontes:
+  # Espelho publico e oficial do GTFS da SPTrans (MobilityData).
+  # Alternativa com cadastro: https://www.sptrans.com.br/desenvolvedores/
+  gtfs_url: "https://storage.googleapis.com/storage/v1/b/mdb-latest/o/br-sao-paulo-sao-paulo-transporte-sptrans-gtfs-8.zip?alt=media"
+  olhovivo_base_url: "https://api.olhovivo.sptrans.com.br/v2.1"
+
+caminhos:
+  raw: "data/raw"
+  interim: "data/interim"
+  processed: "data/processed"
+  models: "models"
+  reports: "reports"
+
+etl:
+  # Raio (em metros) para considerar que uma parada do GTFS e' a mesma
+  # parada de corredor devolvida pela API Olho Vivo.
+  raio_corredor_m: 120
+  # Centro de referencia para distancias (Praca da Se).
+  centro_lat: -23.550520
+  centro_lon: -46.633308
+
+modelo:
+  alvo: "headway_seg"
+  # Coluna usada para agrupar o split: nenhuma linha aparece ao mesmo
+  # tempo em treino e teste (evita vazamento de identidade da linha).
+  grupo: "route_id"
+  teste_frac: 0.25
+  n_folds: 5
+  # "ridge", "arvore", "floresta" ou "boosting"
+  algoritmo: "boosting"
+  grid:
+    boosting:
+      modelo__learning_rate: [0.05, 0.1]
+      modelo__max_leaf_nodes: [15, 31]
+    floresta:
+      modelo__n_estimators: [200]
+      modelo__min_samples_leaf: [1, 5, 20]
+    ridge:
+      modelo__alpha: [0.1, 1.0, 10.0, 100.0]
+    arvore:
+      modelo__max_depth: [4, 8, 12, null]
+
+features:
+  numericas:
+    - hora_inicio
+    - n_paradas
+    - extensao_km
+    - duracao_min
+    - velocidade_kmh
+    - paradas_por_km
+    - dist_centro_origem_km
+    - dist_centro_destino_km
+    - n_linhas_origem
+    - n_linhas_destino
+    - pct_paradas_corredor
+  categoricas:
+    - periodo_dia
+    - tipo_dia
+    - sentido
+    - area_operacao
+    - tipo_linha
+    - corredor_principal

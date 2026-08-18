@@ -1,0 +1,38 @@
+# Coleta agendada da frota em operacao (API Olho Vivo).
+#
+# O GTFS diz o que foi PLANEJADO. A API diz o que esta ACONTECENDO. Guardar um
+# retrato a cada meia hora e' o comeco de uma base historica de oferta
+# realizada, que nao existe pronta em lugar nenhum.
+#
+# Para ligar: crie o secret API_OLHO_VIVO no repositorio
+# (Settings > Secrets and variables > Actions) e tire o comentario do schedule.
+name: coleta
+
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: "*/30 9-23 * * *"   # a cada 30 min, horario de Brasilia +3
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - run: uv sync
+
+      - name: Guardar retrato da frota
+        env:
+          API_OLHO_VIVO: ${{ secrets.API_OLHO_VIVO }}
+        run: uv run python -c "from lab2_sptrans.config import carregar_config; from lab2_sptrans.extract import baixar_snapshot_frota; baixar_snapshot_frota(carregar_config())"
+
+      - name: Publicar como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: posicao-frota
+          path: data/raw/olhovivo/
+          retention-days: 30

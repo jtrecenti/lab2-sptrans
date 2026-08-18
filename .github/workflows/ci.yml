@@ -1,0 +1,31 @@
+# Integracao continua: a cada push, o GitHub confere se o projeto ainda esta de pe.
+#
+# O CI NAO baixa o GTFS nem chama a API. Ele roda os testes, que usam dados
+# sinteticos. Teste que depende de rede e token nao e' teste, e' aposta.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Instalar dependencias
+        run: uv sync --all-groups
+
+      - name: Estilo
+        run: uv run ruff check .
+
+      - name: Testes
+        run: uv run pytest

@@ -1,0 +1,291 @@
+---
+title: "Oferta de ônibus em São Paulo: o que explica o intervalo entre partidas"
+subtitle: "Lab 2: Prática Avançada em Data Science e Visualização, PADS Insper"
+author: "Julio Trecenti"
+date: today
+lang: pt-BR
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    code-tools: true
+    embed-resources: true
+    theme: cosmo
+execute:
+  warning: false
+  message: false
+---
+
+```{python}
+# | label: setup
+# Repare no que este notebook NÃO faz: ele não define função, não limpa dado e
+# não treina modelo na mão. Tudo isso mora no pacote. O notebook conta a
+# história e mostra o resultado.
+import pandas as pd
+from plotnine import *
+
+from lab2_sptrans.config import carregar_config
+from lab2_sptrans import transform, model, evaluate
+
+pd.set_option("display.max_columns", 40)
+cfg = carregar_config()
+```
+
+## A pergunta
+
+A SPTrans publica, no GTFS, o intervalo programado entre ônibus de cada linha,
+para cada faixa de horário do dia. Esse intervalo, o **headway**, é a tradução
+numérica do nível de serviço: 300 segundos é um ônibus a cada 5 minutos.
+
+A pergunta deste relatório é simples de enunciar e difícil de responder:
+
+> quanto da oferta de ônibus dá para explicar a partir da **estrutura** da
+> linha, sem olhar demanda?
+
+Se a resposta fosse "quase tudo", a rede seria previsível a partir do mapa. Se
+for "quase nada", a oferta é decisão política e contratual, e um produto de
+mobilidade precisa de outras bases. A resposta interessa a quem planeja rede, a
+quem opera frota e a quem quer vender acessibilidade como serviço.
+
+## Os dados
+
+```{python}
+# | label: dados
+tabela = transform.carregar_tabela(cfg)
+print(f"{len(tabela):,} registros | {tabela['route_id'].nunique():,} linhas de ônibus")
+tabela[
+    [
+        "route_short_name",
+        "sentido",
+        "hora_inicio",
+        "extensao_km",
+        "n_paradas",
+        "pct_paradas_corredor",
+        "headway_seg",
+    ]
+].head(8)
+```
+
+Cada registro é uma combinação de **linha, sentido e faixa horária**. As
+variáveis vêm de duas fontes cruzadas:
+
+- **GTFS da SPTrans**, a rede planejada: extensão do traçado, número de
+  paradas, duração e velocidade programada, pontas do percurso, tipo de dia;
+- **API Olho Vivo**, a camada em tempo real: quais paradas pertencem a
+  corredores de ônibus, cruzadas por proximidade geográfica com as paradas do
+  GTFS.
+
+### O alvo é assimétrico
+
+```{python}
+# | label: fig-alvo
+# | fig-cap: "Distribuição do intervalo entre partidas."
+(
+    ggplot(tabela, aes("headway_seg / 60"))
+    + geom_histogram(bins=40, fill="#2c7fb8", color="white")
+    + labs(
+        title="A maior parte da rede opera entre 10 e 30 minutos de intervalo",
+        x="Intervalo entre ônibus (minutos)",
+        y="Registros",
+    )
+    + theme_minimal()
+)
+```
+
+A cauda longa à direita é o motivo de o modelo treinar em escala logarítmica.
+Sem isso, os poucos casos de intervalo muito grande dominam o erro quadrático e
+o modelo passa a errar no meio da distribuição, que é onde estão quase todos os
+casos.
+
+### A hora do dia é o eixo principal
+
+```{python}
+# | label: fig-hora
+# | fig-cap: "Mediana do intervalo por hora e tipo de dia."
+por_hora = (
+    tabela.groupby(["hora_inicio", "tipo_dia"], as_index=False)["headway_seg"]
+    .median()
+    .assign(minutos=lambda d: d["headway_seg"] / 60)
+)
+
+(
+    ggplot(por_hora, aes("hora_inicio", "minutos", color="tipo_dia"))
+    + geom_line(size=1)
+    + labs(
+        title="A rede tem dois vales: manhã e fim de tarde",
+        subtitle="Intervalo menor significa mais ônibus circulando",
+        x="Hora de início da faixa",
+        y="Intervalo mediano (minutos)",
+        color="Tipo de dia",
+    )
+    + theme_minimal()
+)
+```
+
+### O corredor aparece no dado
+
+```{python}
+# | label: fig-corredor
+# | fig-cap: "Intervalo por presença de corredor no itinerário."
+comparacao = tabela.assign(
+    usa_corredor=lambda d: (d["pct_paradas_corredor"] > 0).map(
+        {True: "passa por corredor", False: "não passa"}
+    ),
+    minutos=lambda d: d["headway_seg"] / 60,
+)
+
+(
+    ggplot(comparacao, aes("usa_corredor", "minutos"))
+    + geom_boxplot(fill="#2c7fb8", alpha=0.5)
+    + labs(
+        title="Linha que usa corredor tem intervalo menor",
+        subtitle="Cruzamento entre o GTFS e as paradas de corredor da API Olho Vivo",
+        x="",
+        y="Intervalo (minutos)",
+    )
+    + theme_minimal()
+)
+```
+
+Uma diferença de mediana não é causalidade: corredor e demanda alta andam
+juntos. Mas é sinal suficiente para a variável entrar no modelo.
+
+## O modelo
+
+O pipeline inteiro (imputação, padronização, one-hot e estimador) é um objeto
+só. A divisão treino/teste é feita **por linha de ônibus**: nenhuma linha
+aparece dos dois lados.
+
+```{python}
+# | label: ajuste
+ajuste = model.ajustar(cfg, tabela)
+ajuste["pipeline"]
+```
+
+```{python}
+# | label: tbl-metricas
+# | tbl-cap: "Baseline e modelo, em treino e em teste."
+metricas = evaluate.comparar(ajuste)
+metricas.round(3)
+```
+
+Três leituras dessa tabela:
+
+1. **O modelo ganha do baseline**, mas por uma margem modesta: cerca de dois
+   minutos de erro médio a menos.
+2. **A queda de treino para teste é grande.** Isso é o preço da validação por
+   grupo. Numa divisão aleatória qualquer, faixas horárias da mesma linha
+   cairiam dos dois lados, o modelo decoraria a linha e o número de teste
+   ficaria bem mais bonito, sem que o modelo servisse para linha nova.
+3. **O R² do baseline é negativo.** O R² compara com prever a média; o baseline
+   prevê a mediana, que é o chute certo sob MAE. Métrica e baseline precisam
+   ser escolhidos juntos.
+
+```{python}
+# | label: fig-diagnostico
+# | fig-cap: "Observado contra predito, nos dados de teste."
+residuos = evaluate.residuos(ajuste)
+
+(
+    ggplot(residuos, aes("headway_observado / 60", "headway_predito / 60"))
+    + geom_point(alpha=0.12, size=0.8)
+    + geom_abline(intercept=0, slope=1, linetype="dashed", color="#d95f02")
+    + labs(
+        title="O modelo acerta o meio da distribuição e erra as pontas",
+        x="Observado (minutos)",
+        y="Predito (minutos)",
+    )
+    + theme_minimal()
+)
+```
+
+O achatamento em torno da diagonal é típico: o modelo puxa as predições para o
+centro porque as variáveis disponíveis não distinguem os extremos.
+
+```{python}
+# | label: fig-importancia
+# | fig-cap: "Importância por permutação, medida no conjunto de teste."
+importancia = evaluate.importancia(ajuste, cfg.seed).head(10)
+
+(
+    ggplot(
+        importancia,
+        aes("reorder(variavel, piora_mae_seg)", "piora_mae_seg / 60"),
+    )
+    + geom_col(fill="#2c7fb8")
+    + coord_flip()
+    + labs(
+        title="O que o modelo realmente usa",
+        subtitle="Quanto o erro piora, em minutos, ao embaralhar a variável",
+        x="",
+        y="Piora no MAE (minutos)",
+    )
+    + theme_minimal()
+)
+```
+
+## Onde está o valor: o resíduo
+
+A predição em si não é o produto. O que gera decisão é o **resíduo**: linhas
+cuja oferta programada é bem mais espaçada do que a de linhas parecidas.
+
+```{python}
+# | label: tbl-residuos
+# | tbl-cap: "Registros com oferta mais espaçada do que o perfil sugere."
+piores = (
+    residuos.join(tabela[["route_short_name", "route_long_name"]])
+    .nlargest(10, "residuo")[
+        [
+            "route_short_name",
+            "route_long_name",
+            "hora_inicio",
+            "headway_observado",
+            "headway_predito",
+            "residuo",
+        ]
+    ]
+    .assign(
+        observado_min=lambda d: (d["headway_observado"] / 60).round(1),
+        esperado_min=lambda d: (d["headway_predito"] / 60).round(1),
+    )
+    .drop(columns=["headway_observado", "headway_predito", "residuo"])
+)
+piores
+```
+
+Essa lista é uma **hipótese**, não um veredito. Cada caso precisa ser olhado:
+pode ser linha em extinção, linha sazonal, ou erro de cadastro no feed. É
+exatamente esse tipo de lista que um produto de mobilidade entrega para quem
+decide.
+
+## O que este relatório não responde
+
+- **Programado não é realizado.** O GTFS diz o que deveria acontecer. A API
+  Olho Vivo diz o que está acontecendo. Comparar os dois exige coletar posição
+  da frota ao longo de dias, e é isso que o `.github/workflows/coleta.yml` faz.
+- **Falta demanda.** Sem população, empregos e viagens por região, o modelo
+  explica pouco por construção. O Censo 2022 por setor censitário é o próximo
+  cruzamento natural.
+- **Falta contrato.** A oferta de cada linha é definida em contrato de
+  concessão, informação que não está em nenhuma das duas bases.
+
+Um R² de 0,30 com dados estruturais é, ele mesmo, o achado: **a estrutura da
+rede explica pouco da oferta**, e qualquer produto sério sobre o tema precisa
+das bases de demanda.
+
+---
+
+::: {.callout-note}
+## Reprodutibilidade
+
+Este relatório não guarda dado nem resultado. Ele importa o pacote
+`lab2_sptrans` e refaz o cálculo a cada renderização. Para reproduzir:
+
+```bash
+uv sync --all-groups
+uv run lab2 extract
+uv run lab2 transform
+uv run quarto render notebooks/relatorio.qmd
+```
+:::

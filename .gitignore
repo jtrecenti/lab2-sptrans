@@ -1,0 +1,25 @@
+# ambiente e segredos
+.venv/
+.env
+
+# dados e artefatos: nao entram no Git.
+# O repositorio guarda o codigo que RECRIA os dados, nao os dados.
+data/
+models/
+reports/
+
+# quarto e notebooks
+/.quarto/
+notebooks/*.html
+notebooks/*_files/
+notebooks/*.ipynb
+slides/*.html
+slides/*_files/
+_site/
+
+# python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
