@@ -197,10 +197,12 @@ dia, área de operação, número de paradas e distância ao centro.
 Requisitos: [uv](https://docs.astral.sh/uv/) e Git. Quarto só para o relatório.
 
 ```bash
-uv sync --all-groups        # ambiente
-uv run lab2 all             # pipeline completo
-uv run pytest               # testes
-uv run ruff check .         # estilo
+uv sync --all-groups                      # ambiente de trabalho
+uv run lab2 all                           # pipeline completo
+uv run pytest                             # testes
+uv run ruff check .                       # estilo
+
+uv sync --all-groups --extra notebooks    # so' para renderizar Quarto
 uv run quarto render notebooks/relatorio.qmd
 ```
 

@@ -27,10 +27,12 @@ test:             ## roda a suite de testes
 lint:             ## checa estilo
 	uv run ruff check .
 
-report:           ## renderiza o relatorio Quarto
+report:           ## renderiza o relatorio Quarto (precisa do extra notebooks)
+	uv sync --all-groups --extra notebooks
 	PYTHONUTF8=1 uv run quarto render notebooks/relatorio.qmd
 
-slides:           ## renderiza os slides
+slides:           ## renderiza os slides (precisa do extra notebooks)
+	uv sync --all-groups --extra notebooks
 	PYTHONUTF8=1 uv run quarto render slides/tidymodels-para-sklearn.qmd
 
 limpar:           ## apaga artefatos derivados (dado bruto fica)
