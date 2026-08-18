@@ -49,12 +49,12 @@ def _parser() -> argparse.ArgumentParser:
 
     p_train = sub.add_parser("train", help="ajusta o pipeline e salva o modelo")
     p_train.add_argument(
-        "--algoritmo", default=None, choices=["ridge", "arvore", "floresta", "boosting"]
+        "--algoritmo", default=None, choices=["ridge", "lasso", "arvore", "floresta", "boosting"]
     )
 
     p_eval = sub.add_parser("evaluate", help="avalia o modelo e gera relatórios")
     p_eval.add_argument(
-        "--algoritmo", default=None, choices=["ridge", "arvore", "floresta", "boosting"]
+        "--algoritmo", default=None, choices=["ridge", "lasso", "arvore", "floresta", "boosting"]
     )
     p_eval.add_argument("--sem-graficos", action="store_true")
 
@@ -64,7 +64,7 @@ def _parser() -> argparse.ArgumentParser:
 
     p_all = sub.add_parser("all", help="extract + transform + train + evaluate")
     p_all.add_argument(
-        "--algoritmo", default=None, choices=["ridge", "arvore", "floresta", "boosting"]
+        "--algoritmo", default=None, choices=["ridge", "lasso", "arvore", "floresta", "boosting"]
     )
     return parser
 

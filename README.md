@@ -79,7 +79,6 @@ lab2-sptrans/
 │   └── cli.py                # cada etapa vira um comando
 ├── tests/                    # testes que rodam sem rede e sem token
 ├── notebooks/relatorio.qmd   # o relatório reprodutível (Quarto)
-├── slides/                   # a ponte tidymodels -> scikit-learn
 ├── .github/workflows/        # ci.yml (testes) e coleta.yml (coleta agendada)
 ├── data/  models/  reports/  # gerados, fora do Git
 └── Makefile
@@ -146,8 +145,9 @@ Três consequências práticas:
 - o `GridSearchCV` pode ajustar hiperparâmetro do modelo e do pré-processamento
   ao mesmo tempo.
 
-Quem vem do R: isso é `recipe()` + `workflow()` do tidymodels. Os slides em
-`slides/` fazem o de-para termo a termo.
+Quem vem do R: isso é `recipe()` + `workflow()` do tidymodels. O material da
+aula traz o de-para termo a termo e um par de notebooks que ajusta o mesmo
+lasso e a mesma floresta nas duas linguagens.
 
 ## Validação por grupo
 
@@ -209,6 +209,7 @@ uv run quarto render notebooks/relatorio.qmd
 Trocar de modelo sem tocar no código:
 
 ```bash
+uv run lab2 evaluate --algoritmo lasso
 uv run lab2 evaluate --algoritmo ridge
 uv run lab2 evaluate --algoritmo arvore
 uv run lab2 evaluate --algoritmo floresta
@@ -242,11 +243,14 @@ resolve, e o modelo perde pouco.
 
 ## Material do laboratório
 
-- [`docs/plano-de-aula.md`](docs/plano-de-aula.md): roteiro da aula, minuto a minuto.
-- [`docs/exercicios.md`](docs/exercicios.md): exercícios, do aquecimento ao desafio.
-- [`slides/tidymodels-para-sklearn.qmd`](slides/tidymodels-para-sklearn.qmd): a
-  ponte entre o que vocês já sabem em R e o scikit-learn.
-- [`notebooks/relatorio.qmd`](notebooks/relatorio.qmd): o relatório reprodutível.
+Este repositório é o **exemplo de código**. Os slides, o plano de aula, os
+exercícios e o par de notebooks que compara tidymodels e scikit-learn ficam
+separados, no material da aula, e são distribuídos pelo Blackboard.
+
+O que está aqui:
+
+- [`notebooks/relatorio.qmd`](notebooks/relatorio.qmd): o relatório reprodutível
+  que consome o pacote.
 
 ## Licença
 

@@ -23,7 +23,7 @@ import pandas as pd
 from sklearn.compose import TransformedTargetRegressor
 from sklearn.dummy import DummyRegressor
 from sklearn.ensemble import HistGradientBoostingRegressor, RandomForestRegressor
-from sklearn.linear_model import Ridge
+from sklearn.linear_model import Lasso, Ridge
 from sklearn.model_selection import (
     GridSearchCV,
     GroupKFold,
@@ -42,7 +42,11 @@ log = logging.getLogger(__name__)
 def criar_estimador(nome: str, seed: int):
     """Devolve o estimador pedido no `conf/config.yaml`."""
     catalogo = {
-        "ridge": Ridge(random_state=None),
+        "ridge": Ridge(),
+        # o lasso zera coeficiente, entao serve tambem como selecao de
+        # variaveis. So faz sentido porque o pre-processamento padroniza:
+        # sem escala comum, a penalizacao castiga quem tem unidade grande.
+        "lasso": Lasso(random_state=seed, max_iter=5000),
         "arvore": DecisionTreeRegressor(random_state=seed),
         # n_jobs=1 de proposito: quem paraleliza e o GridSearchCV. Duas camadas
         # de paralelismo brigam pelos mesmos nucleos e deixam tudo mais lento.

@@ -31,7 +31,7 @@ modelo:
   grupo: "route_id"
   teste_frac: 0.25
   n_folds: 5
-  # "ridge", "arvore", "floresta" ou "boosting"
+  # "ridge", "lasso", "arvore", "floresta" ou "boosting"
   algoritmo: "boosting"
   grid:
     boosting:
@@ -42,6 +42,8 @@ modelo:
       modelo__min_samples_leaf: [1, 5, 20]
     ridge:
       modelo__alpha: [0.1, 1.0, 10.0, 100.0]
+    lasso:
+      modelo__alpha: [0.001, 0.01, 0.1]
     arvore:
       modelo__max_depth: [4, 8, 12, null]
 
