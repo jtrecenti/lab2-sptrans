@@ -206,6 +206,24 @@ Duas observações que costumam gerar dúvida:
 Variáveis que mais pesam, por importância de permutação: hora do dia, tipo de
 dia, área de operação, número de paradas e distância ao centro.
 
+## Baixar a tabela pronta
+
+O repositório versiona o **código que recria** os dados, não os dados. Mas o
+feed GTFS é republicado periodicamente pela SPTrans, então rodar o pipeline hoje
+não devolve exatamente o mesmo arquivo de ontem. Para quem precisa de um retrato
+estável (material de aula, comparação entre linguagens, citação), os *releases*
+guardam a tabela congelada:
+
+```bash
+curl -LO https://github.com/jtrecenti/lab2-sptrans/releases/download/dados-20260819/viagens.csv.gz
+```
+
+O mesmo release traz o **dicionário da base** em Excel, com o papel de cada
+coluna, unidade, faltantes, origem e os níveis das categóricas.
+
+Release é o lugar certo para isso: o arquivo fica versionado e com URL estável,
+sem entrar no histórico do Git e engordar todo `git clone`.
+
 ## Rodando
 
 Requisitos: [uv](https://docs.astral.sh/uv/) e Git. Quarto só para o relatório.
