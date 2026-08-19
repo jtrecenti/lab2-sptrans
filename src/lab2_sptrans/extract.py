@@ -78,9 +78,13 @@ def ler_gtfs(cfg: Config) -> dict[str, pd.DataFrame]:
                 log.warning("arquivo %s ausente no feed GTFS", nome)
                 continue
             with zip_gtfs.open(nome) as fluxo:
-                # o feed da SPTrans vem em latin-1, não em utf-8
+                # O feed da SPTrans é UTF-8. Declarar isso importa: `latin-1`
+                # decodifica qualquer byte sem levantar erro, então uma escolha
+                # errada de codificação não quebra, só corrompe o acento em
+                # silêncio ("METRÔ" vira "METRÃ"). Erro que não estoura é
+                # o pior tipo de erro.
                 tabelas[nome.removesuffix(".txt")] = pd.read_csv(
-                    fluxo, dtype=str, encoding="latin-1"
+                    fluxo, dtype=str, encoding="utf-8"
                 )
     return tabelas
 
