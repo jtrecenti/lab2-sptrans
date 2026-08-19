@@ -100,7 +100,24 @@ def construir_baseline(cfg: Config) -> Pipeline:
 
 
 def separar_treino_teste(cfg: Config, X, y, grupos):
-    """Divisão treino/teste **por grupo**: uma linha inteira vai para um lado só."""
+    """Divisão treino/teste **por grupo**: uma linha inteira vai para um lado só.
+
+    O `train_test_split` não aceita `groups=`, então a divisão por grupo sai do
+    `GroupShuffleSplit`. Ele é um *validador cruzado*, não uma função: o
+    `.split()` devolve um gerador de pares de índices, um por repetição, e o
+    `next()` puxa o primeiro. Parece estranho na primeira leitura.
+
+    A forma explícita dá o mesmo resultado e lê melhor:
+
+        linhas = tabela[grupo].unique()
+        linhas_treino, _ = train_test_split(linhas, test_size=..., random_state=...)
+        e_treino = tabela[grupo].isin(linhas_treino)
+
+    (é o que a versão mínima do laboratório faz). Aqui ficamos com o objeto
+    porque ele é parametrizável e trocável por outro esquema de reamostragem sem
+    reescrever a função. Na validação cruzada não há escolha: o `GridSearchCV`
+    espera um objeto com `.split()`, e o `GroupKFold` é o caminho.
+    """
     divisor = GroupShuffleSplit(
         n_splits=1, test_size=cfg["modelo"]["teste_frac"], random_state=cfg.seed
     )
